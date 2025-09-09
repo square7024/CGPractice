@@ -80,6 +80,15 @@ int value_4x4(int m[][4]) {
 	return value;
 }
 
+void print_muliple(int m[][4], int n) {
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			if (m[i][j] % n == 0) printf("%3d ", m[i][j]);
+			else printf("    ");
+		} printf("\n");
+	}
+	printf("\n");
+}
 
 int main()
 {
@@ -89,15 +98,15 @@ int main()
 	int i, j;
 	char command;
 	int min1, min2, max1, max2;
-	int e_flag = 0;
-	int f_flag = 0;
+	int e_flag = 0, f_flag = 0, n_flag = 0;
+	int n;
 
 	srand(time(NULL));
 
 	for (i = 0; i < 4; i++) { 
 		for (j = 0; j < 4; j++) { 
-			matrix1[i][j] = rand() % 10;
-			matrix2[i][j] = rand() % 10;
+			matrix1[i][j] = (rand() % 9) + 1;
+			matrix2[i][j] = (rand() % 9) + 1;
 		}
 	}
 
@@ -111,6 +120,7 @@ int main()
 		scanf(" %c", &command);
 		if (e_flag == 1 && command != 'e') e_flag = 0;
 		if (f_flag == 1 && command != 'f') f_flag = 0;
+		if (n_flag == 1 && command != 'n') n_flag = 0;
 		printf("\n");
 
 		switch (command) {
@@ -223,14 +233,33 @@ int main()
 		case 's': { // 행렬 재생성
 			for (i = 0; i < 4; i++) {
 				for (j = 0; j < 4; j++) {
-					matrix1[i][j] = rand() % 10;
-					matrix2[i][j] = rand() % 10;
+					matrix1[i][j] = (rand() % 9) + 1;
+					matrix2[i][j] = (rand() % 9) + 1;
 				}
 			}
 			printf("matrix1 :\n");
 			print_matrix(matrix1);
 			printf("matrix2 :\n");
 			print_matrix(matrix2);
+			break;
+		}
+		case 'n': {
+			if (!n_flag){
+				printf("input the number : ");
+				scanf(" %d", &n);
+				printf("matrix1 :\n");
+				print_muliple(matrix1, n);
+				printf("matrix2 :\n");
+				print_muliple(matrix2, n);
+				n_flag = 1;
+			}
+			else if (n_flag) {
+				printf("matrix1 :\n");
+				print_matrix(matrix1);
+				printf("matrix2 :\n");
+				print_matrix(matrix2);
+				n_flag = 0;
+			}
 			break;
 		}
 		case 'q': { // 프로그램 종료
