@@ -1,22 +1,24 @@
 #include <iostream>
 #include <random>
-#include <gl/glew.h>											//--- ÇÊ¿äÇÑ Çì´õÆÄÀÏ include
+#include <gl/glew.h>											//--- í•„ìš”í•œ í—¤ë”íŒŒì¼ include
 #include <gl/freeglut.h>
 #include <gl/freeglut_ext.h>
 
-constexpr float INIT_SQUARE_SIZE = 0.1f;
+constexpr float SQUARE_SIZE = 0.05f;
 constexpr int MAX_SQ = 20;
 
 struct Square {
 	float cx, cy;
 	float r, g, b;
-	float size{ INIT_SQUARE_SIZE };
+	float size{ SQUARE_SIZE };
 };
 
 Square s[MAX_SQ];
-int sq_index = 0;				// ÇöÀç »ç°¢Çü °³¼ö
+int sq_index = 0;				// í˜„ì¬ ì‚¬ê°í˜• ê°œìˆ˜
 
-int draggingIndex = -1;   // ÇöÀç µå·¡±× ÁßÀÎ »ç°¢Çü ÀÎµ¦½º (-1ÀÌ¸é ¾øÀ½)
+Square eraser = { 0, 0,    0.0f, 0.0f, 0.0f,    SQUARE_SIZE * 2.0f };
+
+bool erasing = false;   // ì§€ìš°ê°œ í”Œë˜ê·¸
 
 std::random_device rd;
 std::mt19937 gen(rd());
@@ -35,57 +37,66 @@ void randomize_color(Square& s) {
 }
 
 void randomize_xy(Square& s) {
-	std::uniform_real_distribution<float> sq_urd(-1.0f + INIT_SQUARE_SIZE, 1.0f - INIT_SQUARE_SIZE);
+	std::uniform_real_distribution<float> sq_urd(-1.0f + SQUARE_SIZE, 1.0f - SQUARE_SIZE);
 	s.cx = sq_urd(gen);
 	s.cy = sq_urd(gen);
 }
 
 void init_squares();
 
-void main(int argc, char** argv)								//--- À©µµ¿ì Ãâ·ÂÇÏ°í Äİ¹éÇÔ¼ö ¼³Á¤ 
+void main(int argc, char** argv)								//--- ìœˆë„ìš° ì¶œë ¥í•˜ê³  ì½œë°±í•¨ìˆ˜ ì„¤ì • 
 {
-	//--- À©µµ¿ì »ı¼ºÇÏ±â
-	glutInit(&argc, argv);										// glut ÃÊ±âÈ­
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);				// µğ½ºÇÃ·¹ÀÌ ¸ğµå ¼³Á¤
-	glutInitWindowPosition(100, 100);							// À©µµ¿ìÀÇ À§Ä¡ ÁöÁ¤
-	glutInitWindowSize(800, 800);								// À©µµ¿ìÀÇ Å©±â ÁöÁ¤
-	glutCreateWindow("Practice_05");								// À©µµ¿ì »ı¼º(À©µµ¿ì ÀÌ¸§)
+	//--- ìœˆë„ìš° ìƒì„±í•˜ê¸°
+	glutInit(&argc, argv);										// glut ì´ˆê¸°í™”
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);				// ë””ìŠ¤í”Œë ˆì´ ëª¨ë“œ ì„¤ì •
+	glutInitWindowPosition(100, 100);							// ìœˆë„ìš°ì˜ ìœ„ì¹˜ ì§€ì •
+	glutInitWindowSize(800, 800);								// ìœˆë„ìš°ì˜ í¬ê¸° ì§€ì •
+	glutCreateWindow("Practice_05");								// ìœˆë„ìš° ìƒì„±(ìœˆë„ìš° ì´ë¦„)
 
-	//--- GLEW ÃÊ±âÈ­ÇÏ±â
+	//--- GLEW ì´ˆê¸°í™”í•˜ê¸°
 	glewExperimental = GL_TRUE;
-	if (glewInit() != GLEW_OK) {								// glew ÃÊ±âÈ­ 
+	if (glewInit() != GLEW_OK) {								// glew ì´ˆê¸°í™” 
 		std::cerr << "Unable to initialize GLEW" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	else
 		std::cout << "GLEW Initialized\n";
-	glutDisplayFunc(drawScene);									// Ãâ·Â ÇÔ¼öÀÇ ÁöÁ¤
-	glutReshapeFunc(Reshape);									// ´Ù½Ã ±×¸®±â ÇÔ¼ö ÁöÁ¤
+	glutDisplayFunc(drawScene);									// ì¶œë ¥ í•¨ìˆ˜ì˜ ì§€ì •
+	glutReshapeFunc(Reshape);									// ë‹¤ì‹œ ê·¸ë¦¬ê¸° í•¨ìˆ˜ ì§€ì •
 	glutKeyboardFunc(Keyboard);
 	glutMouseFunc(Mouse);
 	//glutMotionFunc(Motion);
-	glutMainLoop();												// ÀÌº¥Æ® Ã³¸® ½ÃÀÛ
+	init_squares();
+	glutMainLoop();												// ì´ë²¤íŠ¸ ì²˜ë¦¬ ì‹œì‘
 }
 
-GLvoid drawScene() {												//--- Äİ¹é ÇÔ¼ö: Ãâ·Â Äİ¹é ÇÔ¼ö 
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);						// ¹ÙÅÁ»öÀ» ¡®blue¡¯·Î ÁöÁ¤
-	glClear(GL_COLOR_BUFFER_BIT);								// ¼³Á¤µÈ »öÀ¸·Î ÀüÃ¼¸¦ Ä¥ÇÏ±â
-	// ±×¸®±â ºÎºĞ ±¸Çö: ±×¸®±â °ü·Ã ºÎºĞÀÌ ¿©±â¿¡ Æ÷ÇÔµÈ´Ù.
+GLvoid drawScene() {												//--- ì½œë°± í•¨ìˆ˜: ì¶œë ¥ ì½œë°± í•¨ìˆ˜ 
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f);						// ë°”íƒ•ìƒ‰ì„ â€˜blueâ€™ë¡œ ì§€ì •
+	glClear(GL_COLOR_BUFFER_BIT);								// ì„¤ì •ëœ ìƒ‰ìœ¼ë¡œ ì „ì²´ë¥¼ ì¹ í•˜ê¸°
+	// ê·¸ë¦¬ê¸° ë¶€ë¶„ êµ¬í˜„: ê·¸ë¦¬ê¸° ê´€ë ¨ ë¶€ë¶„ì´ ì—¬ê¸°ì— í¬í•¨ëœë‹¤.
 
 	for (int i = 0; i < sq_index; ++i) {
 		glColor3f(s[i].r, s[i].g, s[i].b);
 		draw_square(s[i]);
 	}
 
-	glutSwapBuffers();											// È­¸é¿¡ Ãâ·ÂÇÏ±â
+	if (erasing) {
+		glColor3f(eraser.r, eraser.g, eraser.b);
+		draw_square(eraser);
+	}
+
+	glutSwapBuffers();											// í™”ë©´ì— ì¶œë ¥í•˜ê¸°
 }
 
-GLvoid Reshape(int w, int h) {									//--- Äİ¹é ÇÔ¼ö: ´Ù½Ã ±×¸®±â Äİ¹é ÇÔ¼ö 
+GLvoid Reshape(int w, int h) {									//--- ì½œë°± í•¨ìˆ˜: ë‹¤ì‹œ ê·¸ë¦¬ê¸° ì½œë°± í•¨ìˆ˜ 
 	glViewport(0, 0, w, h);
 }
 
 GLvoid Keyboard(unsigned char key, int x, int y) {
 	switch (key) {
+	case 'r':
+		init_squares();
+		break;
 	case 'q':
 		glutLeaveMainLoop();
 		break;
@@ -99,6 +110,16 @@ GLvoid Mouse(int button, int state, int x, int y) {
 	float nx = (2.0f * x / win_w) - 1.0f;
 	float ny = 1.0f - (2.0f * y / win_h);
 
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+		eraser.cx = nx;
+		eraser.cy = ny;
+		eraser.size = SQUARE_SIZE * 2.0f;
+		erasing = true;
+		eraser.r = eraser.g = eraser.b = 0.f;
+	}
+	else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
+		erasing = false;
+	}
 
 	glutPostRedisplay();
 }
@@ -115,7 +136,7 @@ GLvoid Motion(int x, int y) {
 	float w = sq.x2 - sq.x1;
 	float h = sq.y2 - sq.y1;
 
-	// ¸¶¿ì½º ÁÂÇ¥ - offset = »õ ÁÂÃø ÇÏ´Ü
+	// ë§ˆìš°ìŠ¤ ì¢Œí‘œ - offset = ìƒˆ ì¢Œì¸¡ í•˜ë‹¨
 	sq.x1 = nx - dragOffsetX;
 	sq.y1 = ny - dragOffsetY;
 	sq.x2 = sq.x1 + w;
@@ -126,7 +147,12 @@ GLvoid Motion(int x, int y) {
 */
 
 void init_squares() {
-
+	sq_index = 0;
+	for (int i = 0; i < MAX_SQ && sq_index < MAX_SQ; ++i) {
+		randomize_color(s[sq_index]);
+		randomize_xy(s[sq_index]);
+		++sq_index;
+	}
 }
 
 void draw_square(Square& s) {
