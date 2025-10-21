@@ -137,8 +137,8 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(shaderProgramID);
 	glPointSize(5.0);
-	//glLineWidth(10.0);
-	glDrawArrays(GL_POINTS, 0, 4); //--- 렌더링하기: 0번 인덱스에서 4개의 버텍스를 사용하여 선 그리기
+	glLineWidth(10.0);
+	glDrawArrays(GL_LINES, 0, 4); //--- 렌더링하기: 0번 인덱스에서 4개의 버텍스를 사용하여 선 그리기
 	glutSwapBuffers(); // 화면에 출력하기
 }
 
