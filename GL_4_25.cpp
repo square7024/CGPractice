@@ -28,6 +28,10 @@ GLuint vertexShader, fragmentShader; //--- 세이더 객체
 GLuint shaderProgramID; //--- 셰이더 프로그램
 
 glm::vec3 cameraPos;
+bool gLightOn = true;
+float gAngleY = 0.0f;
+float gLightAngle = 70.0f;
+float gLightRadius = 5.0f;
 
 GLuint vao, vbo;
 //const GLfloat triShape[3][3] = { //--- 삼각형 위치 값
@@ -200,7 +204,7 @@ GLvoid InitBuffer()
 	//--- Shader Program 사용하기
 	glUseProgram(shaderProgramID);
 	unsigned int lightPosLocation = glGetUniformLocation(shaderProgramID, "lightPos"); //--- lightPos 값 전달: (0.0, 0.0, 5.0);
-	glUniform3f(lightPosLocation, 0.0, 0.0, 5.0);
+	glUniform3f(lightPosLocation, 0.0, 0.0, gLightRadius);
 	unsigned int lightColorLocation = glGetUniformLocation(shaderProgramID, "lightColor"); //--- lightColor 값 전달: (1.0, 1.0, 1.0) 백색
 	glUniform3f(lightColorLocation, 1.0, 1.0, 1.0);
 	unsigned int objColorLocation = glGetUniformLocation(shaderProgramID, "objectColor"); //--- object Color값 전달: (1.0, 0.5, 0.3)의 색
@@ -209,13 +213,11 @@ GLvoid InitBuffer()
 	//glUniform3f(viewPosLocation, cameraPos.x, cameraPos.y, cameraPos.z);
 }
 
+/*
 //--- 출력 콜백 함수
 GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 {
-	GLfloat rColor, gColor, bColor;
-
-	rColor = bColor = gColor = 0.0;
-	glClearColor(rColor, gColor, bColor, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//--- 렌더링 파이프라인에 세이더 불러오기
@@ -226,14 +228,14 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	int viewLoc = glGetUniformLocation(shaderProgramID, "view"); //--- 버텍스 세이더에서 뷰잉 변환 행렬 변수값을 받아온다.
 	int projLoc = glGetUniformLocation(shaderProgramID, "projection"); //--- 버텍스 세이더에서 투영 변환 행렬 변수값을 받아온다.
 
-	glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f); //--- 카메라 위치
+	glm::vec3 cameraPos = glm::vec3(-3.0f, 3.0f, 7.0f); //--- 카메라 위치
 	glm::vec3 cameraDirection = glm::vec3(0.0f, 0.0f, 0.0f); //--- 카메라 바라보는 방향
 	glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f); //--- 카메라 위쪽 방향
 	glm::mat4 view = glm::mat4(1.0f);
 
 	//--- 모델링 변환, 뷰잉 변환, 투영 변환 행렬을 설정한 후, 버텍스 세이더에 저장한다.
 	glm::mat4 mTransform = glm::mat4(1.0f);
-	//mTransform = glm::rotate(mTransform, glm::radians(0), glm::vec3(0.0f, 1.0, 0.0f));
+	mTransform = glm::rotate(mTransform, glm::radians(gAngleY), glm::vec3(0.0f, 1.0, 0.0f));
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &mTransform[0][0]);
 
 	glm::mat4 vTransform = glm::mat4(1.0f);
@@ -244,11 +246,141 @@ GLvoid drawScene() //--- 콜백 함수: 그리기 콜백 함수
 	pTransform = glm::perspective(glm::radians(60.0f), (float)width / (float)height, 0.1f, 100.0f);
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &pTransform[0][0]);
 
+	glm::vec3 lightPos;
+	lightPos.x = gLightRadius * cosf(gLightAngle);
+	lightPos.y = 0.0f;
+	lightPos.z = gLightRadius * sinf(gLightAngle);
 
-	//--- 삼각형 그리기
+	GLint lightPosLoc = glGetUniformLocation(shaderProgramID, "lightPos");
+	glUniform3fv(lightPosLoc, 1, glm::value_ptr(lightPos));
+
+	//--- 큐브 그리기
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 
+	//--- 조명 궤도 원 그리기 (xz 평면, 반지름 gLightRadius)
+	glUseProgram(0);           // 고정 파이프라인으로 잠깐 전환 (color 사용)
+	glColor3f(1.0f, 1.0f, 1.0f); // 흰색 궤도
+
+	glBegin(GL_LINE_LOOP);
+	const int segments = 64;
+	for (int i = 0; i < segments; ++i) {
+		float theta = 2.0f * 3.1415926f * i / segments;
+		float x = gLightRadius * cosf(theta);
+		float z = gLightRadius * sinf(theta);
+		glVertex3f(x, 0.0f, z);   // y=0인 평면에 원
+	}
+	glEnd();
+
+	glUseProgram(shaderProgramID);   // 다시 셰이더로 복귀
+
+	// --- 조명 위치에 작은 큐브 그리기 ---
+	glUseProgram(0);
+	glColor3f(1.0f, 1.0f, 0.0f);  // 노란색
+
+	glPushMatrix();
+	glTranslatef(lightPos.x, lightPos.y, lightPos.z);
+	glScalef(0.1f, 0.1f, 0.1f);   // 작은 크기의 큐브
+
+	// 큐브 1개 그리기
+	glBegin(GL_QUADS);
+
+	// Front
+	glVertex3f(-0.5, -0.5, 0.5);
+	glVertex3f(0.5, -0.5, 0.5);
+	glVertex3f(0.5, 0.5, 0.5);
+	glVertex3f(-0.5, 0.5, 0.5);
+
+	// Back
+	glVertex3f(-0.5, -0.5, -0.5);
+	glVertex3f(0.5, -0.5, -0.5);
+	glVertex3f(0.5, 0.5, -0.5);
+	glVertex3f(-0.5, 0.5, -0.5);
+
+	// Left
+	glVertex3f(-0.5, -0.5, -0.5);
+	glVertex3f(-0.5, -0.5, 0.5);
+	glVertex3f(-0.5, 0.5, 0.5);
+	glVertex3f(-0.5, 0.5, -0.5);
+
+	// Right
+	glVertex3f(0.5, -0.5, -0.5);
+	glVertex3f(0.5, -0.5, 0.5);
+	glVertex3f(0.5, 0.5, 0.5);
+	glVertex3f(0.5, 0.5, -0.5);
+
+	// Top
+	glVertex3f(-0.5, 0.5, 0.5);
+	glVertex3f(0.5, 0.5, 0.5);
+	glVertex3f(0.5, 0.5, -0.5);
+	glVertex3f(-0.5, 0.5, -0.5);
+
+	// Bottom
+	glVertex3f(-0.5, -0.5, 0.5);
+	glVertex3f(0.5, -0.5, 0.5);
+	glVertex3f(0.5, -0.5, -0.5);
+	glVertex3f(-0.5, -0.5, -0.5);
+
+	glEnd();
+	glPopMatrix();
+
+	glUseProgram(shaderProgramID); // 원래 쉐이더로 복귀
+
 	glutSwapBuffers(); //--- 화면에 출력하기
+}
+*/
+GLvoid drawScene()
+{
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glUseProgram(shaderProgramID);
+	glBindVertexArray(vao);
+
+	GLint modelLoc = glGetUniformLocation(shaderProgramID, "model");
+	GLint viewLoc = glGetUniformLocation(shaderProgramID, "view");
+	GLint projLoc = glGetUniformLocation(shaderProgramID, "projection");
+	GLint objColorLoc = glGetUniformLocation(shaderProgramID, "objectColor");
+
+	// ----- 카메라 행렬 -----
+	glm::vec3 cameraPos(-3.0f, 3.0f, 7.0f);
+	glm::mat4 view = glm::lookAt(cameraPos,
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::mat4 proj = glm::perspective(glm::radians(60.0f),
+		(float)width / (float)height,
+		0.1f, 100.0f);
+
+	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(proj));
+
+	// ----- 조명 위치 계산 & 유니폼 -----
+	glm::vec3 lightPos;
+	lightPos.x = gLightRadius * cosf(gLightAngle);
+	lightPos.y = 0.0f;
+	lightPos.z = gLightRadius * sinf(gLightAngle);
+
+	GLint lightPosLoc = glGetUniformLocation(shaderProgramID, "lightPos");
+	glUniform3fv(lightPosLoc, 1, glm::value_ptr(lightPos));
+
+	// ----- 1. 메인 큐브 그리기 -----
+	glm::mat4 modelCube(1.0f);
+	modelCube = glm::rotate(modelCube, glm::radians(gAngleY), glm::vec3(0,1,0));
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelCube));
+	glUniform3f(objColorLoc, 1.0f, 0.5f, 0.3f); // 오브젝트 색
+
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+
+	// ----- 2. 조명 위치에 작은 큐브 그리기 -----
+	glm::mat4 modelLight(1.0f);
+	modelLight = glm::translate(modelLight, lightPos);        // 조명 위치로 이동
+	modelLight = glm::scale(modelLight, glm::vec3(0.2f));     // 더 작게 만들기
+
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelLight));
+	glUniform3f(objColorLoc, 1.0f, 1.0f, 0.0f); // 노란색 큐브(조명 표시용)
+
+	glDrawArrays(GL_TRIANGLES, 0, 36); // 같은 VAO를 재사용
+
+	glutSwapBuffers();
 }
 
 //--- 다시그리기 콜백 함수
@@ -261,7 +393,56 @@ GLvoid Reshape(int w, int h) //--- 콜백 함수: 다시 그리기 콜백 함수
 
 GLvoid Keyboard(unsigned char key, int, int)
 {
+	switch (key)
+	{
+	case 'm':
+	{
+		gLightOn = !gLightOn;  // 상태 토글
 
+		glUseProgram(shaderProgramID);
+		GLint lightOnLoc = glGetUniformLocation(shaderProgramID, "lightOn");
+		glUniform1i(lightOnLoc, gLightOn ? 1 : 0);
+
+		//GLint lightColorLoc = glGetUniformLocation(shaderProgramID, "lightColor");
+		//if (gLightOn) {
+		//	// 조명 켜기: 흰색 조명
+		//	glUniform3f(lightColorLoc, 1.0f, 1.0f, 1.0f);
+		//}
+		//else {
+		//	// 조명 끄기: 조명 색 0 → ambient/diffuse 둘 다 0이 돼서 완전 어둡게
+		//	glUniform3f(lightColorLoc, 0.0f, 0.0f, 0.0f);
+		//}
+		break;
+	}
+	case 'y':
+	{
+		gAngleY += 10.0f;
+		if (gAngleY >= 360.0f)   // 360도 넘어가면 0으로 되돌리기 (넘치지 않게)
+			gAngleY -= 360.0f;
+		break;
+	}
+	case 'r':
+		gLightAngle += glm::radians(10.0f);
+		if (gLightAngle > glm::two_pi<float>())
+			gLightAngle -= glm::two_pi<float>();
+		break;
+	case 'R':
+		gLightAngle -= glm::radians(10.0f);
+		if (gLightAngle < glm::two_pi<float>())
+			gLightAngle += glm::two_pi<float>();
+		break;
+	case 'z':
+		gLightRadius -= 0.2f;
+		if (gLightRadius < 0.5f) gLightRadius = 0.5f;  // 너무 가까우면 0.5로 제한
+		break;
+	case 'Z':
+		gLightRadius += 0.2f;
+		if (gLightRadius > 20.0f) gLightRadius = 20.0f; // 너무 멀면 제한
+		break;
+	case 'q':
+		exit(0);
+		break;
+	}
 	glutPostRedisplay();
 }
 
