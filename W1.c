@@ -17,7 +17,7 @@ int mat3[4][4];
 
 int main()
 {
-	char command = 'a';
+	char command = '\0';
 	int e_state = 0;
 	int f_state = 0;
 
