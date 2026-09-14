@@ -17,17 +17,20 @@ int board_size = BOARD_SIZE;
 Rect rect1;
 Rect rect2;
 
-void clear_board();
-void draw_rect1();
-void draw_rect2();
-void print_board();
-void update_board();
-void move_x(Rect* rect, int direction);
+void clear_board();                         // 보드 초기화
+void draw_rect1();                          // 사각형 1 그리기
+void draw_rect2();                          // 사각형 2 그리기
+void print_board();                         // 보드 출력
+void update_board();                        // 보드 업데이트
+void move_x(Rect* rect, int direction);     // 사각형 x축 이동
+void move_y(Rect* rect, int direction);     // 사각형 y축 이동
 
 int main()
 {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
+
+	char command = '\0';
 
     printf("input coord value1: ");
     scanf("%d %d %d %d",
@@ -40,6 +43,59 @@ int main()
         &rect2.x2, &rect2.y2);
 
 	update_board();
+
+    while (command != 'q') {
+        printf("\n명령어를 입력하세요 : ");
+        scanf(" %c", &command);
+
+        switch (command) {
+
+            // rect1 이동
+        case 'a':
+            move_x(&rect1, -1);
+            break;
+
+        case 'd':
+            move_x(&rect1, 1);
+            break;
+
+        case 's':
+            move_y(&rect1, 1);
+            break;
+
+        case 'w':
+            move_y(&rect1, -1);
+            break;
+
+
+            // rect2 이동
+        case 'j':
+            move_x(&rect2, -1);
+            break;
+
+        case 'l':
+            move_x(&rect2, 1);
+            break;
+
+        case 'k':
+            move_y(&rect2, 1);
+            break;
+
+        case 'i':
+            move_y(&rect2, -1);
+            break;
+
+
+        case 'q':
+            return 0;
+
+        default:
+            printf("잘못된 명령어입니다.\n");
+            continue;
+        }
+
+        update_board();
+    }
 
     return 0;
 }
@@ -141,5 +197,19 @@ void move_x(Rect* rect, int direction)
         // 왼쪽
         rect->x1 = (rect->x1 - 2 + board_size) % board_size + 1;
         rect->x2 = (rect->x2 - 2 + board_size) % board_size + 1;
+    }
+}
+
+void move_y(Rect* rect, int direction)
+{
+    if (direction == 1) {
+        // 아래쪽
+        rect->y1 = rect->y1 % board_size + 1;
+        rect->y2 = rect->y2 % board_size + 1;
+    }
+    else {
+        // 위쪽
+        rect->y1 = (rect->y1 - 2 + board_size) % board_size + 1;
+        rect->y2 = (rect->y2 - 2 + board_size) % board_size + 1;
     }
 }
