@@ -3,6 +3,9 @@
 #include <iostream>
 #include <random>
 
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
 struct Rect
 {
 	float x1;
@@ -52,7 +55,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 
 	//--- 윈도우 생성
-	GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL Window", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "OpenGL Window", nullptr, nullptr);
 	if (!window) {
 		std::cerr << "윈도우 생성 실패!" << std::endl;
 		glfwTerminate();
@@ -78,7 +81,7 @@ int main()
 	SetRandomAreaColor();
 
 	//--- 뷰포트 설정
-	glViewport(0, 0, 800, 600);
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	//--- 메인 루프
 	while (!glfwWindowShouldClose(window)) {
@@ -241,11 +244,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
 		//--- 선택된 정사각형 크기 증가
 		else if (key == GLFW_KEY_EQUAL)
-			ResizeSelectedRect(0.05f);
+			ResizeSelectedRect(0.01f);
 
 		//--- 선택된 정사각형 크기 감소
 		else if (key == GLFW_KEY_MINUS)
-			ResizeSelectedRect(-0.05f);
+			ResizeSelectedRect(-0.01f);
 
 		//--- 선택된 정사각형 색상 변경
 		else if (key == GLFW_KEY_C)
@@ -308,7 +311,7 @@ void ResizeSelectedRect(float amount)
 				float newY2 = rect.y2 + amount;
 
 				//--- 최소 크기 제한
-				if (newX2 - newX1 < 0.1f)
+				if (newX2 - newX1 < 0.02f)
 					return;
 
 				//--- 사분면 경계 설정

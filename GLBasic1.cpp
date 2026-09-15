@@ -4,6 +4,9 @@
 #include <cstdlib>
 #include <ctime>
 
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
 void InputProcess(GLFWwindow* window);
 void DrawScene();
 
@@ -15,6 +18,9 @@ float bColor = 1.0f;
 //--- 타이머
 bool timerOn = false;
 double lastTime = 0.0;
+
+//--- A키 상태
+bool aKeyPressed = false;
 
 int main()
 {
@@ -32,7 +38,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	//--- 윈도우 생성
-	GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL Window", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "OpenGL Window", nullptr, nullptr);
 	if (!window) {
 		std::cerr << "윈도우 생성 실패!" << std::endl;
 		glfwTerminate();
@@ -50,7 +56,7 @@ int main()
 	}
 
 	//--- 뷰포트 설정
-	glViewport(0, 0, 800, 600);
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	//--- 메인 루프
 	while (!glfwWindowShouldClose(window)) {
@@ -92,9 +98,16 @@ void InputProcess(GLFWwindow *window)
 		bColor = 0.0f;
 	}
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-		rColor = (float)rand() / RAND_MAX;
-		gColor = (float)rand() / RAND_MAX;
-		bColor = (float)rand() / RAND_MAX;
+		if (!aKeyPressed) {
+			rColor = (float)rand() / RAND_MAX;
+			gColor = (float)rand() / RAND_MAX;
+			bColor = (float)rand() / RAND_MAX;
+
+			aKeyPressed = true;
+		}
+	}
+	else {
+		aKeyPressed = false;
 	}
 	if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
 		rColor = 0.4f;

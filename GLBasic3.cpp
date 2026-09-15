@@ -4,6 +4,9 @@
 #include <random>
 #include <algorithm>
 
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
 struct Rect
 {
 	float x1;
@@ -54,7 +57,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
 
 	//--- 윈도우 생성
-	GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL Window", nullptr, nullptr);
+	GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "OpenGL Window", nullptr, nullptr);
 	if (!window) {
 		std::cerr << "윈도우 생성 실패!" << std::endl;
 		glfwTerminate();
@@ -79,7 +82,7 @@ int main()
 	glfwSetCursorPosCallback(window, CursorPosCallback);
 
 	//--- 뷰포트 설정
-	glViewport(0, 0, 800, 600);
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	//--- 메인 루프
 	while (!glfwWindowShouldClose(window)) {
