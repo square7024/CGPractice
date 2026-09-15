@@ -2,6 +2,9 @@
 #include <gl/glfw3.h>
 #include <iostream>
 
+void InputProcess(GLFWwindow* window);
+void DrawScene();
+
 int main() 
 {
 	//--- GLFW 초기화
@@ -39,11 +42,9 @@ int main()
 	//--- 메인 루프
 	while (!glfwWindowShouldClose(window)) {
 		// 입력 처리
-		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-			glfwSetWindowShouldClose(window, true);
-		// 화면 지우기 (파란색)
-		glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // RGBA (흰색)
-		glClear(GL_COLOR_BUFFER_BIT);
+		InputProcess(window);
+		// 화면 지우기 (흰색)
+		DrawScene();
 		// 버퍼 교체
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -53,4 +54,17 @@ int main()
 	glfwDestroyWindow(window);
 	glfwTerminate();
 	return 0;
+}
+
+void InputProcess(GLFWwindow* window)
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+}
+
+//--- 렌더링 함수
+void DrawScene()
+{
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // RGBA (흰색)
+	glClear(GL_COLOR_BUFFER_BIT);
 }
