@@ -190,7 +190,7 @@ void CreateRect(float x, float y)
 	rect.b = colorDist(gen);
 
 	//--- 랜덤 대각선 이동 방향
-	float speed = 0.005f;
+	float speed = 0.02f;
 
 	if (directionDist(gen) == 0)
 		rect.dx = speed;
@@ -253,17 +253,8 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
 				for (int i = 0; i < rectCount; ++i) {
 
-					float width = rects[i].x2 - rects[i].x1;
-					float height = rects[i].y2 - rects[i].y1;
-
-					//--- 위쪽 가장자리에 순서대로 배치
-					rects[i].x1 = -1.0f + i * 0.25f;
-					rects[i].x2 = rects[i].x1 + width;
-
-					rects[i].y2 = 1.0f;
-					rects[i].y1 = rects[i].y2 - height;
-
-					rects[i].edge = 0;
+					//--- 현재 위치에서 아래쪽으로 이동 시작
+					rects[i].edge = -1;
 				}
 			}
 		}
@@ -339,6 +330,9 @@ void MoveRect1()
 {
 	for (int i = 0; i < rectCount; ++i) {
 
+		float width = rects[i].x2 - rects[i].x1;
+		float height = rects[i].y2 - rects[i].y1;
+
 		//--- 사각형 이동
 		rects[i].x1 += rects[i].dx;
 		rects[i].x2 += rects[i].dx;
@@ -346,16 +340,38 @@ void MoveRect1()
 		rects[i].y1 += rects[i].dy;
 		rects[i].y2 += rects[i].dy;
 
-		//--- 좌우 벽 충돌
-		if (rects[i].x1 <= -1.0f ||
-			rects[i].x2 >= 1.0f) {
+		//--- 오른쪽 벽 충돌
+		if (rects[i].x2 >= 1.0f) {
+
+			rects[i].x2 = 1.0f;
+			rects[i].x1 = rects[i].x2 - width;
 
 			rects[i].dx = -rects[i].dx;
 		}
 
-		//--- 위아래 벽 충돌
-		if (rects[i].y1 <= -1.0f ||
-			rects[i].y2 >= 1.0f) {
+		//--- 왼쪽 벽 충돌
+		else if (rects[i].x1 <= -1.0f) {
+
+			rects[i].x1 = -1.0f;
+			rects[i].x2 = rects[i].x1 + width;
+
+			rects[i].dx = -rects[i].dx;
+		}
+
+		//--- 위쪽 벽 충돌
+		if (rects[i].y2 >= 1.0f) {
+
+			rects[i].y2 = 1.0f;
+			rects[i].y1 = rects[i].y2 - height;
+
+			rects[i].dy = -rects[i].dy;
+		}
+
+		//--- 아래쪽 벽 충돌
+		else if (rects[i].y1 <= -1.0f) {
+
+			rects[i].y1 = -1.0f;
+			rects[i].y2 = rects[i].y1 + height;
 
 			rects[i].dy = -rects[i].dy;
 		}
@@ -378,7 +394,7 @@ void MoveRect2()
 			rects[i].x2 = 1.0f;
 			rects[i].x1 = rects[i].x2 - width;
 
-			rects[i].dx = -0.005f;
+			rects[i].dx = -0.02f;
 
 			rects[i].y1 -= 0.1f;
 			rects[i].y2 -= 0.1f;
@@ -392,7 +408,7 @@ void MoveRect2()
 			rects[i].x1 = -1.0f;
 			rects[i].x2 = rects[i].x1 + width;
 
-			rects[i].dx = 0.005f;
+			rects[i].dx = 0.02f;
 
 			rects[i].y1 -= 0.1f;
 			rects[i].y2 -= 0.1f;
@@ -411,15 +427,31 @@ void MoveRect2()
 
 void MoveRect3()
 {
-	float speed = 0.005f;
+	float speed = 0.02f;
 
 	for (int i = 0; i < rectCount; ++i) {
 
 		float width = rects[i].x2 - rects[i].x1;
 		float height = rects[i].y2 - rects[i].y1;
 
+		if (rects[i].edge == -1) {
+
+			rects[i].y1 -= speed;
+			rects[i].y2 -= speed;
+
+			//--- 아래쪽 가장자리에 도착
+			if (rects[i].y1 <= -1.0f) {
+
+				rects[i].y1 = -1.0f;
+				rects[i].y2 = rects[i].y1 + height;
+
+				//--- 아래쪽 가장자리 상태
+				rects[i].edge = 2;
+			}
+		}
+
 		//--- 위쪽 : 오른쪽으로 이동
-		if (rects[i].edge == 0) {
+		else if (rects[i].edge == 0) {
 
 			rects[i].x1 += speed;
 			rects[i].x2 += speed;
@@ -566,7 +598,7 @@ void ChangeColor()
 
 void MoveOriginal()
 {
-	float speed = 0.005f;
+	float speed = 0.02f;
 	bool allArrived = true;
 
 	for (int i = 0; i < rectCount; ++i) {

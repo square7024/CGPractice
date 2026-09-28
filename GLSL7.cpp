@@ -854,15 +854,6 @@ void KeyCallback(
 
 	else if (key == GLFW_KEY_J)
 	{
-		// 우상
-		MoveSelected(
-			MOVE_STEP,
-			MOVE_STEP
-		);
-	}
-
-	else if (key == GLFW_KEY_K)
-	{
 		// 좌하
 		MoveSelected(
 			-MOVE_STEP,
@@ -870,12 +861,21 @@ void KeyCallback(
 		);
 	}
 
-	else if (key == GLFW_KEY_L)
+	else if (key == GLFW_KEY_K)
 	{
 		// 우하
 		MoveSelected(
 			MOVE_STEP,
 			-MOVE_STEP
+		);
+	}
+
+	else if (key == GLFW_KEY_L)
+	{
+		// 우상
+		MoveSelected(
+			MOVE_STEP,
+			MOVE_STEP
 		);
 	}
 
@@ -915,6 +915,8 @@ void KeyCallback(
 			-MOVE_STEP
 		);
 	}
+	else if (key == GLFW_KEY_Q)
+		glfwSetWindowShouldClose(window, true);
 }
 
 // 마우스 클릭으로 도형 선택

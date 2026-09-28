@@ -279,6 +279,10 @@ void SplitRect(int index)
 	rect.visible = false;
 
 	int animationType{ animationDist(gen) };
+	//int animationType{ 1 };
+	//int animationType{ 2 };
+	//int animationType{ 3 };
+	//int animationType{ 4 };
 
 	bool brighten{
 		brightnessDist(gen) == 1
@@ -296,7 +300,7 @@ void SplitRect(int index)
 	{
 		CreateAnimationRect(
 			rect.x - offset,
-			rect.y,
+			rect.y - offset,
 			childSize,
 			rect.r,
 			rect.g,
@@ -308,7 +312,7 @@ void SplitRect(int index)
 
 		CreateAnimationRect(
 			rect.x + offset,
-			rect.y,
+			rect.y + offset,
 			childSize,
 			rect.r,
 			rect.g,
@@ -319,7 +323,7 @@ void SplitRect(int index)
 		);
 
 		CreateAnimationRect(
-			rect.x,
+			rect.x - offset,
 			rect.y + offset,
 			childSize,
 			rect.r,
@@ -331,7 +335,7 @@ void SplitRect(int index)
 		);
 
 		CreateAnimationRect(
-			rect.x,
+			rect.x + offset,
 			rect.y - offset,
 			childSize,
 			rect.r,
