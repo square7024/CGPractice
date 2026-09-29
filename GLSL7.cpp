@@ -52,7 +52,6 @@ std::random_device rd;
 std::mt19937 gen(rd());
 
 std::uniform_real_distribution<float> positionDist(-0.8f, 0.8f);
-std::uniform_real_distribution<float> sizeDist(0.10f, 0.22f);
 std::uniform_real_distribution<float> colorDist(0.0f, 1.0f);
 
 const float MOVE_STEP{ 0.05f };
@@ -67,7 +66,7 @@ void InitBuffer();
 
 void AddShape(ShapeType type);
 void DrawScene();
-void DrawShape(const Shape& shape);
+void DrawShape(const Shape& shape, bool selected);
 
 void MoveSelected(float dx, float dy);
 void MoveAll(float dx, float dy);
@@ -98,6 +97,15 @@ void MouseButtonCallback(
 	int button,
 	int action,
 	int mods
+);
+
+void AddVertex(
+	std::vector<float>& vertices,
+	float x,
+	float y,
+	float r,
+	float g,
+	float b
 );
 
 int main()
@@ -354,11 +362,11 @@ void InitBuffer()
 		VBO
 	);
 
-	// 한 도형에서 최대 6개의 정점 사용
-	// 정점 하나는 위치 3개 + 색상 3개
+	// 한 도형에서 최대 20개의 정점을 저장할 공간 확보
+	// 정점 하나는 위치 3개 + 색상 3개 = float 6개
 	glBufferData(
 		GL_ARRAY_BUFFER,
-		sizeof(float) * 6 * 6,
+		sizeof(float) * 20 * 6,
 		nullptr,
 		GL_DYNAMIC_DRAW
 	);
@@ -403,7 +411,7 @@ void AddShape(ShapeType type)
 	shape.x = positionDist(gen);
 	shape.y = positionDist(gen);
 
-	shape.size = sizeDist(gen);
+	shape.size = 0.15f;
 
 	shape.r = colorDist(gen);
 	shape.g = colorDist(gen);
@@ -431,12 +439,15 @@ void DrawScene()
 
 	for (int i = 0; i < shapeCount; ++i)
 	{
-		DrawShape(shapes[i]);
+		DrawShape(
+			shapes[i],
+			i == selectedIndex
+		);
 	}
 }
 
 // 도형 그리기
-void DrawShape(const Shape& shape)
+void DrawShape(const Shape& shape, bool selected)
 {
 	std::vector<float> vertices;
 
@@ -448,17 +459,10 @@ void DrawShape(const Shape& shape)
 	float g{ shape.g };
 	float b{ shape.b };
 
-	auto AddVertex =
-		[&vertices, r, g, b](float vx, float vy)
-		{
-			vertices.push_back(vx);
-			vertices.push_back(vy);
-			vertices.push_back(0.0f);
-
-			vertices.push_back(r);
-			vertices.push_back(g);
-			vertices.push_back(b);
-		};
+	// 선택된 도형의 테두리 색상
+	float borderR{ 1.0f };
+	float borderG{ 0.0f };
+	float borderB{ 0.0f };
 
 	GLenum drawMode{ GL_TRIANGLES };
 	int vertexCount{ 0 };
@@ -466,15 +470,49 @@ void DrawShape(const Shape& shape)
 	// 점
 	if (shape.type == ShapeType::Point)
 	{
-		float half{ size * 0.20f };
+		float half{ 0.02f };
 
-		AddVertex(x - half, y + half);
-		AddVertex(x - half, y - half);
-		AddVertex(x + half, y - half);
+		AddVertex(
+			vertices,
+			x - half,
+			y + half,
+			r, g, b
+		);
 
-		AddVertex(x - half, y + half);
-		AddVertex(x + half, y - half);
-		AddVertex(x + half, y + half);
+		AddVertex(
+			vertices,
+			x - half,
+			y - half,
+			r, g, b
+		);
+
+		AddVertex(
+			vertices,
+			x + half,
+			y - half,
+			r, g, b
+		);
+
+		AddVertex(
+			vertices,
+			x - half,
+			y + half,
+			r, g, b
+		);
+
+		AddVertex(
+			vertices,
+			x + half,
+			y - half,
+			r, g, b
+		);
+
+		AddVertex(
+			vertices,
+			x + half,
+			y + half,
+			r, g, b
+		);
 
 		drawMode = GL_TRIANGLES;
 		vertexCount = 6;
@@ -486,13 +524,17 @@ void DrawShape(const Shape& shape)
 		float half{ size };
 
 		AddVertex(
+			vertices,
 			x - half,
-			y
+			y,
+			r, g, b
 		);
 
 		AddVertex(
+			vertices,
 			x + half,
-			y
+			y,
+			r, g, b
 		);
 
 		drawMode = GL_LINES;
@@ -505,18 +547,24 @@ void DrawShape(const Shape& shape)
 		float half{ size / 2.0f };
 
 		AddVertex(
+			vertices,
 			x,
-			y + half
+			y + half,
+			r, g, b
 		);
 
 		AddVertex(
+			vertices,
 			x - half,
-			y - half
+			y - half,
+			r, g, b
 		);
 
 		AddVertex(
+			vertices,
 			x + half,
-			y - half
+			y - half,
+			r, g, b
 		);
 
 		drawMode = GL_TRIANGLES;
@@ -530,34 +578,46 @@ void DrawShape(const Shape& shape)
 
 		// 첫 번째 삼각형
 		AddVertex(
+			vertices,
 			x - half,
-			y + half
+			y + half,
+			r, g, b
 		);
 
 		AddVertex(
+			vertices,
 			x - half,
-			y - half
+			y - half,
+			r, g, b
 		);
 
 		AddVertex(
+			vertices,
 			x + half,
-			y - half
+			y - half,
+			r, g, b
 		);
 
 		// 두 번째 삼각형
 		AddVertex(
+			vertices,
 			x - half,
-			y + half
+			y + half,
+			r, g, b
 		);
 
 		AddVertex(
+			vertices,
 			x + half,
-			y - half
+			y - half,
+			r, g, b
 		);
 
 		AddVertex(
+			vertices,
 			x + half,
-			y + half
+			y + half,
+			r, g, b
 		);
 
 		drawMode = GL_TRIANGLES;
@@ -576,16 +636,219 @@ void DrawShape(const Shape& shape)
 		vertices.data()
 	);
 
+	// 선
 	if (shape.type == ShapeType::Line)
 	{
+		// 선택된 선이면 뒤에 굵은 빨간 선 그리기
+		if (selected)
+		{
+			std::vector<float> borderVertices;
+
+			float half{ size };
+
+			AddVertex(
+				borderVertices,
+				x - half,
+				y,
+				1.0f, 0.0f, 0.0f
+			);
+
+			AddVertex(
+				borderVertices,
+				x + half,
+				y,
+				1.0f, 0.0f, 0.0f
+			);
+
+			glBufferSubData(
+				GL_ARRAY_BUFFER,
+				0,
+				borderVertices.size() * sizeof(float),
+				borderVertices.data()
+			);
+
+			glLineWidth(7.0f);
+
+			glDrawArrays(
+				GL_LINES,
+				0,
+				2
+			);
+
+			// 원래 선의 정점 데이터를 다시 VBO에 넣기
+			glBufferSubData(
+				GL_ARRAY_BUFFER,
+				0,
+				vertices.size() * sizeof(float),
+				vertices.data()
+			);
+		}
+
+		// 원래 색상의 선
 		glLineWidth(3.0f);
+
+		glDrawArrays(
+			GL_LINES,
+			0,
+			vertexCount
+		);
 	}
 
-	glDrawArrays(
-		drawMode,
-		0,
-		vertexCount
-	);
+	// 점, 삼각형, 사각형
+	else
+	{
+		glDrawArrays(
+			drawMode,
+			0,
+			vertexCount
+		);
+	}
+
+	// 선택된 삼각형 테두리
+	if (selected && shape.type == ShapeType::Triangle)
+	{
+		float half{ size / 2.0f };
+
+		vertices.clear();
+
+		AddVertex(
+			vertices,
+			x,
+			y + half,
+			borderR, borderG, borderB
+		);
+
+		AddVertex(
+			vertices,
+			x - half,
+			y - half,
+			borderR, borderG, borderB
+		);
+
+		AddVertex(
+			vertices,
+			x + half,
+			y - half,
+			borderR, borderG, borderB
+		);
+
+		glBufferSubData(
+			GL_ARRAY_BUFFER,
+			0,
+			vertices.size() * sizeof(float),
+			vertices.data()
+		);
+
+		glLineWidth(2.0f);
+
+		glDrawArrays(
+			GL_LINE_LOOP,
+			0,
+			3
+		);
+	}
+
+	// 선택된 점 테두리
+	if (selected && shape.type == ShapeType::Point)
+	{
+		float half{ 0.02f };
+
+		vertices.clear();
+
+		AddVertex(
+			vertices,
+			x - half,
+			y + half,
+			borderR, borderG, borderB
+		);
+
+		AddVertex(
+			vertices,
+			x - half,
+			y - half,
+			borderR, borderG, borderB
+		);
+
+		AddVertex(
+			vertices,
+			x + half,
+			y - half,
+			borderR, borderG, borderB
+		);
+
+		AddVertex(
+			vertices,
+			x + half,
+			y + half,
+			borderR, borderG, borderB
+		);
+
+		glBufferSubData(
+			GL_ARRAY_BUFFER,
+			0,
+			vertices.size() * sizeof(float),
+			vertices.data()
+		);
+
+		glLineWidth(2.0f);
+
+		glDrawArrays(
+			GL_LINE_LOOP,
+			0,
+			4
+		);
+	}
+
+	// 선택된 사각형 테두리
+	if (selected && shape.type == ShapeType::Rect)
+	{
+		float half{ size / 2.0f };
+
+		vertices.clear();
+
+		AddVertex(
+			vertices,
+			x - half,
+			y + half,
+			borderR, borderG, borderB
+		);
+
+		AddVertex(
+			vertices,
+			x - half,
+			y - half,
+			borderR, borderG, borderB
+		);
+
+		AddVertex(
+			vertices,
+			x + half,
+			y - half,
+			borderR, borderG, borderB
+		);
+
+		AddVertex(
+			vertices,
+			x + half,
+			y + half,
+			borderR, borderG, borderB
+		);
+
+		glBufferSubData(
+			GL_ARRAY_BUFFER,
+			0,
+			vertices.size() * sizeof(float),
+			vertices.data()
+		);
+
+		glLineWidth(2.0f);
+
+		glDrawArrays(
+			GL_LINE_LOOP,
+			0,
+			4
+		);
+	}
 }
 
 // 선택한 도형 이동
@@ -622,23 +885,34 @@ void MoveAll(float dx, float dy)
 // 화면 밖으로 나가지 않도록 제한
 void ClampShape(Shape& shape)
 {
-	float margin{ shape.size / 2.0f };
+	float marginX{ shape.size / 2.0f };
+	float marginY{ shape.size / 2.0f };
 
-	if (shape.type == ShapeType::Line)
+	//--- 점
+	if (shape.type == ShapeType::Point)
 	{
-		margin = shape.size;
+		marginX = 0.02f;
+		marginY = 0.02f;
+	}
+
+	//--- 선
+	else if (shape.type == ShapeType::Line)
+	{
+		// 수평선이므로 좌우에만 길이가 있음
+		marginX = shape.size;
+		marginY = 0.0f;
 	}
 
 	shape.x = std::clamp(
 		shape.x,
-		-1.0f + margin,
-		1.0f - margin
+		-1.0f + marginX,
+		1.0f - marginX
 	);
 
 	shape.y = std::clamp(
 		shape.y,
-		-1.0f + margin,
-		1.0f - margin
+		-1.0f + marginY,
+		1.0f - marginY
 	);
 }
 
@@ -652,9 +926,7 @@ bool HitTest(
 	// 점
 	if (shape.type == ShapeType::Point)
 	{
-		float half{
-			shape.size * 0.20f
-		};
+		float half{ 0.02f };
 
 		return
 			x >= shape.x - half &&
@@ -807,6 +1079,12 @@ void KeyCallback(
 			shapeCount = 0;
 			selectedIndex = -1;
 		}
+
+		// 프로그램 종료
+		else if (key == GLFW_KEY_Q)
+		{
+			glfwSetWindowShouldClose(window, true);
+		}
 	}
 
 	// 선택한 도형 상하좌우 이동
@@ -854,6 +1132,15 @@ void KeyCallback(
 
 	else if (key == GLFW_KEY_J)
 	{
+		// 우상
+		MoveSelected(
+			MOVE_STEP,
+			MOVE_STEP
+		);
+	}
+
+	else if (key == GLFW_KEY_K)
+	{
 		// 좌하
 		MoveSelected(
 			-MOVE_STEP,
@@ -861,21 +1148,12 @@ void KeyCallback(
 		);
 	}
 
-	else if (key == GLFW_KEY_K)
+	else if (key == GLFW_KEY_L)
 	{
 		// 우하
 		MoveSelected(
 			MOVE_STEP,
 			-MOVE_STEP
-		);
-	}
-
-	else if (key == GLFW_KEY_L)
-	{
-		// 우상
-		MoveSelected(
-			MOVE_STEP,
-			MOVE_STEP
 		);
 	}
 
@@ -915,8 +1193,6 @@ void KeyCallback(
 			-MOVE_STEP
 		);
 	}
-	else if (key == GLFW_KEY_Q)
-		glfwSetWindowShouldClose(window, true);
 }
 
 // 마우스 클릭으로 도형 선택
@@ -978,4 +1254,22 @@ void MouseButtonCallback(
 			break;
 		}
 	}
+}
+
+void AddVertex(
+	std::vector<float>& vertices,
+	float x,
+	float y,
+	float r,
+	float g,
+	float b
+)
+{
+	vertices.push_back(x);
+	vertices.push_back(y);
+	vertices.push_back(0.0f);
+
+	vertices.push_back(r);
+	vertices.push_back(g);
+	vertices.push_back(b);
 }
