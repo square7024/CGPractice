@@ -39,7 +39,7 @@ std::mt19937 gen(rd());
 
 std::uniform_real_distribution<float> sizeDist(0.10f, 0.25f);
 std::uniform_real_distribution<float> colorDist(0.0f, 1.0f);
-std::uniform_real_distribution<float> scaleDist(0.7f, 1.3f);
+std::uniform_real_distribution<float> scaleDist(0.5f, 1.8f);
 
 // true: 면으로 그리기
 // false: 선으로 그리기
@@ -561,7 +561,7 @@ void DrawTriangle(const Triangle& triangle)
 	AddVertex(
 		vertices,
 		triangle.x,
-		triangle.y + half,
+		triangle.y + triangle.size,
 		triangle.r,
 		triangle.g,
 		triangle.b
@@ -646,7 +646,7 @@ void CreateTriangle(
 
 	triangle.size =
 		sizeDist(gen);
-
+		
 	triangle.r =
 		colorDist(gen);
 
@@ -658,14 +658,58 @@ void CreateTriangle(
 
 	triangle.used = true;
 
-	// 삼각형이 화면 밖으로 나가지 않도록 크기 제한
+	// 이등변삼각형이 화면 밖이나
+	// 다른 사분면으로 넘어가지 않도록 크기 제한
+
+	// 좌우 방향은 size / 2 만큼 차지하므로 2배
 	float maxSizeX{
-		2.0f * (1.0f - std::abs(x))
+		2.0f * std::min(
+			1.0f - std::abs(x),
+			std::abs(x)
+		)
 	};
 
-	float maxSizeY{
-		2.0f * (1.0f - std::abs(y))
-	};
+	float maxSizeY;
+
+	// 위쪽 사분면
+	if (y >= 0.0f)
+	{
+		// 위쪽은 size만큼 차지
+		float top{
+			1.0f - y
+		};
+
+		// 아래쪽은 size / 2 만큼 차지
+		float bottom{
+			2.0f * y
+		};
+
+		maxSizeY =
+			std::min(
+				top,
+				bottom
+			);
+	}
+
+	// 아래쪽 사분면
+	else
+	{
+		// 위쪽은 size만큼 차지
+		float top{
+			-y
+		};
+
+		// 아래쪽은 size / 2 만큼 차지
+		float bottom{
+			2.0f * (1.0f + y)
+		};
+
+		maxSizeY =
+			std::min(
+				top,
+				bottom
+			);
+	}
 
 	float maxSize{
 		std::min(
@@ -673,27 +717,6 @@ void CreateTriangle(
 			maxSizeY
 		)
 	};
-
-	// 축을 넘어가지 않도록 제한
-	float axisSizeX{
-		2.0f * std::abs(x)
-	};
-
-	float axisSizeY{
-		2.0f * std::abs(y)
-	};
-
-	maxSize =
-		std::min(
-			maxSize,
-			axisSizeX
-		);
-
-	maxSize =
-		std::min(
-			maxSize,
-			axisSizeY
-		);
 
 	if (triangle.size > maxSize)
 	{
@@ -723,9 +746,9 @@ void ChangeTriangleSize(int area)
 		0.05f
 	};
 
-	// 최대 기본 크기
+	// 최대 크기
 	const float MAX_SIZE{
-		0.35f
+		0.45f
 	};
 
 	triangle.size =
@@ -735,22 +758,51 @@ void ChangeTriangleSize(int area)
 			MAX_SIZE
 		);
 
-	// 화면 밖 또는 다른 사분면으로 넘어가지 않도록 제한
+	// 좌우 방향 크기 제한
 	float maxSizeX{
-		2.0f * (1.0f - std::abs(triangle.x))
+		2.0f * std::min(
+			1.0f - std::abs(triangle.x),
+			std::abs(triangle.x)
+		)
 	};
 
-	float maxSizeY{
-		2.0f * (1.0f - std::abs(triangle.y))
-	};
+	float maxSizeY;
 
-	float axisSizeX{
-		2.0f * std::abs(triangle.x)
-	};
+	// 위쪽 사분면
+	if (triangle.y >= 0.0f)
+	{
+		float top{
+			1.0f - triangle.y
+		};
 
-	float axisSizeY{
-		2.0f * std::abs(triangle.y)
-	};
+		float bottom{
+			2.0f * triangle.y
+		};
+
+		maxSizeY =
+			std::min(
+				top,
+				bottom
+			);
+	}
+
+	// 아래쪽 사분면
+	else
+	{
+		float top{
+			-triangle.y
+		};
+
+		float bottom{
+			2.0f * (1.0f + triangle.y)
+		};
+
+		maxSizeY =
+			std::min(
+				top,
+				bottom
+			);
+	}
 
 	float maxSize{
 		std::min(
@@ -758,18 +810,6 @@ void ChangeTriangleSize(int area)
 			maxSizeY
 		)
 	};
-
-	maxSize =
-		std::min(
-			maxSize,
-			axisSizeX
-		);
-
-	maxSize =
-		std::min(
-			maxSize,
-			axisSizeY
-		);
 
 	if (triangle.size > maxSize)
 	{

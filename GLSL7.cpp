@@ -1130,7 +1130,7 @@ void KeyCallback(
 		);
 	}
 
-	else if (key == GLFW_KEY_J)
+	else if (key == GLFW_KEY_L)
 	{
 		// 우상
 		MoveSelected(
@@ -1139,7 +1139,7 @@ void KeyCallback(
 		);
 	}
 
-	else if (key == GLFW_KEY_K)
+	else if (key == GLFW_KEY_J)
 	{
 		// 좌하
 		MoveSelected(
@@ -1148,7 +1148,7 @@ void KeyCallback(
 		);
 	}
 
-	else if (key == GLFW_KEY_L)
+	else if (key == GLFW_KEY_K)
 	{
 		// 우하
 		MoveSelected(
