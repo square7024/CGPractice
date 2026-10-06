@@ -34,11 +34,22 @@ struct Triangle
 	// 이동 속도
 	float speed;
 
+	// 2번 이동 상태
+	bool movingDown;
+	float targetY;
+
 	// 스파이럴 이동용
 	float centerX;
 	float centerY;
 	float angle;
 	float radius;
+
+	bool spiralOut;
+	int waitCount;
+
+	// 현재 이동 경로 시작점
+	float pathStartX;
+	float pathStartY;
 };
 
 Triangle triangles[4];
@@ -55,7 +66,8 @@ std::mt19937 gen(rd());
 
 std::uniform_real_distribution<float> sizeDist(0.10f, 0.20f);
 std::uniform_real_distribution<float> colorDist(0.0f, 1.0f);
-std::uniform_real_distribution<float> speedDist(0.01f, 0.025f);
+//std::uniform_real_distribution<float> speedDist(0.01f, 0.025f);
+std::uniform_real_distribution<float> speedDist(0.005f, 0.01f);
 std::uniform_real_distribution<float> directionDist(-1.0f, 1.0f);
 
 // true: 면
@@ -340,7 +352,7 @@ void InitBuffer()
 	// 경로를 그리기 위해 넉넉하게 공간 확보
 	glBufferData(
 		GL_ARRAY_BUFFER,
-		sizeof(float) * 1000 * 6,
+		10000 * sizeof(float),
 		nullptr,
 		GL_DYNAMIC_DRAW
 	);
@@ -378,7 +390,7 @@ void DrawScene()
 	glBindVertexArray(VAO);
 
 	// 이동 경로
-	// DrawPath();
+	DrawPath();
 
 	// 삼각형
 	for (int i = 0; i < 4; ++i)
@@ -427,13 +439,20 @@ void DrawTriangle(const Triangle& triangle)
 
 	float angle{ 0.0f };
 
-	// 2번: 좌우 이동 방향
+	// 2번: 이동 방향
 	if (moveMode == 2)
 	{
-		if (triangle.dx > 0.0f)
+		// 벽에서 아래로 이동 중
+		if (triangle.movingDown)
+		{
+			angle = PI;
+		}
+		// 오른쪽으로 이동
+		else if (triangle.dx > 0.0f)
 		{
 			angle = -PI / 2.0f;
 		}
+		// 왼쪽으로 이동
 		else
 		{
 			angle = PI / 2.0f;
@@ -546,156 +565,252 @@ void DrawTriangle(const Triangle& triangle)
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-// 이동 경로
+// 이동할 경로
 void DrawPath()
 {
-	std::vector<float> vertices;
-
-	float r{ 1.0f };
-	float g{ 0.0f };
-	float b{ 0.0f };
-
-	// 1 : 튕기기
-	if (moveMode == 1)
+	for (int i = 0; i < 4; ++i)
 	{
-		AddVertex(vertices, -0.9f, -0.5f, r, g, b);
-		AddVertex(vertices, 0.6f, 0.9f, r, g, b);
-
-		AddVertex(vertices, 0.6f, 0.9f, r, g, b);
-		AddVertex(vertices, 0.9f, 0.3f, r, g, b);
-
-		AddVertex(vertices, 0.9f, 0.3f, r, g, b);
-		AddVertex(vertices, -0.1f, -0.9f, r, g, b);
-
-		AddVertex(vertices, -0.1f, -0.9f, r, g, b);
-		AddVertex(vertices, -0.9f, -0.5f, r, g, b);
-	}
-
-	// 2 : 좌우 지그재그
-	else if (moveMode == 2)
-	{
-		float y{ 0.8f };
-		bool right{ true };
-
-		for (int i = 0; i < 7; ++i)
+		if (!triangles[i].used)
 		{
-			float x1{
-				right ? -0.9f : 0.9f
-			};
+			continue;
+		}
 
-			float x2{
-				right ? 0.9f : -0.9f
-			};
+		Triangle& triangle = triangles[i];
 
-			AddVertex(vertices, x1, y, r, g, b);
-			AddVertex(vertices, x2, y, r, g, b);
+		float half{
+			triangle.size / 2.0f
+		};
 
-			if (i < 6)
+		float endX{
+			triangle.x
+		};
+
+		float endY{
+			triangle.y
+		};
+
+		// 1번 이동 경로
+		if (moveMode == 1)
+		{
+			float timeX;
+			float timeY;
+
+			// x 방향으로 벽까지 걸리는 거리
+			if (triangle.dx > 0.0f)
 			{
-				AddVertex(vertices, x2, y, r, g, b);
-				AddVertex(vertices, x2, y - 0.25f, r, g, b);
+				timeX =
+					(1.0f - half - triangle.x) /
+					triangle.dx;
+			}
+			else
+			{
+				timeX =
+					(-1.0f + half - triangle.x) /
+					triangle.dx;
 			}
 
-			y -= 0.25f;
-			right = !right;
+			// y 방향으로 벽까지 걸리는 거리
+			if (triangle.dy > 0.0f)
+			{
+				timeY =
+					(1.0f - half - triangle.y) /
+					triangle.dy;
+			}
+			else
+			{
+				timeY =
+					(-1.0f + half - triangle.y) /
+					triangle.dy;
+			}
+
+			// 먼저 충돌하는 벽까지 이동
+			float time{
+				std::min(timeX, timeY)
+			};
+
+			endX =
+				triangle.x +
+				triangle.dx * time;
+
+			endY =
+				triangle.y +
+				triangle.dy * time;
 		}
-	}
 
-	// 3 : 상하 뾰족 지그재그
-	else if (moveMode == 3)
-	{
-		float x{ -0.8f };
-		float step{ 0.4f };
-
-		AddVertex(vertices, x, 0.9f, r, g, b);
-
-		for (int i = 0; i < 4; ++i)
+		// 2번 이동 경로
+		else if (moveMode == 2)
 		{
+			// 아래로 이동 중
+			if (triangle.movingDown)
+			{
+				endX = triangle.x;
+				endY = triangle.targetY;
+			}
+
+			// 좌우 이동 중
+			else
+			{
+				// 오른쪽으로 이동
+				if (triangle.dx > 0.0f)
+				{
+					endX = 1.0f - half;
+					endY = triangle.y;
+				}
+
+				// 왼쪽으로 이동
+				else
+				{
+					endX = -1.0f + half;
+					endY = triangle.y;
+				}
+			}
+		}
+
+		// 3번 이동 경로
+		else if (moveMode == 3)
+		{
+			float moveX{
+				triangle.speed * 0.3f
+			};
+
+			float moveY{
+				triangle.dy * triangle.speed * 3.0f
+			};
+
+			float time;
+
+			// 위쪽으로 이동 중
+			if (triangle.dy > 0.0f)
+			{
+				time =
+					(1.0f - half - triangle.y) /
+					moveY;
+			}
+
+			// 아래쪽으로 이동 중
+			else
+			{
+				time =
+					(-1.0f + half - triangle.y) /
+					moveY;
+			}
+
+			endX =
+				triangle.x +
+				moveX * time;
+
+			endY =
+				triangle.y +
+				moveY * time;
+		}
+
+		// 4번 이동 경로
+		else if (moveMode == 4)
+		{
+			std::vector<float> vertices;
+
+			float pathAngle{
+				0.0f
+			};
+
+			float pathRadius{
+				0.0f
+			};
+
+			// 중심점
 			AddVertex(
 				vertices,
-				x + step / 2.0f,
-				-0.9f,
-				r,
-				g,
-				b
+				triangle.centerX,
+				triangle.centerY,
+				1.0f,
+				0.0f,
+				0.0f
 			);
 
-			AddVertex(
-				vertices,
-				x + step,
-				0.9f,
-				r,
-				g,
-				b
+			// 실제 이동과 같은 방식으로 경로 계산
+			while (pathRadius < 0.5f)
+			{
+				pathAngle += triangle.speed * 7.0f;
+				pathRadius += triangle.speed * 0.10f;
+
+				if (pathRadius > 0.5f)
+				{
+					pathRadius = 0.5f;
+				}
+
+				float pathX{
+					triangle.centerX +
+					pathRadius * std::cos(pathAngle)
+				};
+
+				float pathY{
+					triangle.centerY +
+					pathRadius * std::sin(pathAngle)
+				};
+
+				AddVertex(
+					vertices,
+					pathX,
+					pathY,
+					1.0f,
+					0.0f,
+					0.0f
+				);
+			}
+
+			glBufferSubData(
+				GL_ARRAY_BUFFER,
+				0,
+				vertices.size() * sizeof(float),
+				vertices.data()
 			);
 
-			x += step;
+			glLineWidth(2.0f);
+
+			glDrawArrays(
+				GL_LINE_STRIP,
+				0,
+				vertices.size() / 6
+			);
+
+			continue;
 		}
+
+		std::vector<float> vertices;
+
+		AddVertex(
+			vertices,
+			triangle.x,
+			triangle.y,
+			1.0f,
+			0.0f,
+			0.0f
+		);
+
+		AddVertex(
+			vertices,
+			endX,
+			endY,
+			1.0f,
+			0.0f,
+			0.0f
+		);
+
+		glBufferSubData(
+			GL_ARRAY_BUFFER,
+			0,
+			vertices.size() * sizeof(float),
+			vertices.data()
+		);
+
+		glLineWidth(2.0f);
+
+		glDrawArrays(
+			GL_LINES,
+			0,
+			2
+		);
 	}
-
-	// 4 : 원 스파이럴
-	else if (moveMode == 4)
-	{
-		const int POINT_COUNT{ 200 };
-
-		for (int i = 1; i < POINT_COUNT; ++i)
-		{
-			float angle1{
-				(i - 1) * 0.12f
-			};
-
-			float radius1{
-				0.0035f * (i - 1)
-			};
-
-			float angle2{
-				i * 0.12f
-			};
-
-			float radius2{
-				0.0035f * i
-			};
-
-			float x1{
-				radius1 * std::cos(angle1)
-			};
-
-			float y1{
-				radius1 * std::sin(angle1)
-			};
-
-			float x2{
-				radius2 * std::cos(angle2)
-			};
-
-			float y2{
-				radius2 * std::sin(angle2)
-			};
-
-			AddVertex(vertices, x1, y1, r, g, b);
-			AddVertex(vertices, x2, y2, r, g, b);
-		}
-	}
-
-	if (vertices.empty())
-	{
-		return;
-	}
-
-	glBufferSubData(
-		GL_ARRAY_BUFFER,
-		0,
-		vertices.size() * sizeof(float),
-		vertices.data()
-	);
-
-	glLineWidth(1.0f);
-
-	glDrawArrays(
-		GL_LINES,
-		0,
-		static_cast<GLsizei>(vertices.size() / 6)
-	);
 }
 
 // 삼각형 생성
@@ -705,6 +820,9 @@ void CreateTriangle(int area, float x, float y)
 
 	triangle.x = x;
 	triangle.y = y;
+
+	triangle.pathStartX = x;
+	triangle.pathStartY = y;
 
 	triangle.size = sizeDist(gen);
 
@@ -716,6 +834,9 @@ void CreateTriangle(int area, float x, float y)
 
 	triangle.dx = directionDist(gen);
 	triangle.dy = directionDist(gen);
+
+	triangle.movingDown = false;
+	triangle.targetY = y;
 
 	// 방향이 너무 작아지는 경우 방지
 	if (std::abs(triangle.dx) < 0.2f)
@@ -733,6 +854,8 @@ void CreateTriangle(int area, float x, float y)
 
 	triangle.angle = 0.0f;
 	triangle.radius = 0.0f;
+	triangle.spiralOut = true;
+	triangle.waitCount = 0;
 
 	triangle.used = true;
 }
@@ -827,28 +950,59 @@ void UpdateHorizontalZigzag(Triangle& triangle)
 		triangle.size / 2.0f
 	};
 
+	// 아래로 이동 중
+	if (triangle.movingDown)
+	{
+		triangle.y -= triangle.speed * 0.5f;
+
+		if (triangle.y <= triangle.targetY)
+		{
+			triangle.y = triangle.targetY;
+			triangle.movingDown = false;
+		}
+
+		return;
+	}
+
+	// 좌우 이동
 	triangle.x += triangle.dx * triangle.speed;
 
-	// 오른쪽 충돌
+	// 오른쪽 벽
 	if (triangle.x + half >= 1.0f)
 	{
 		triangle.x = 1.0f - half;
 		triangle.dx = -std::abs(triangle.dx);
-		triangle.y -= 0.10f;
+
+		triangle.targetY = triangle.y - 0.30f;
+
+		if (triangle.targetY - half <= -1.0f)
+		{
+			triangle.y = 1.0f - half;
+			triangle.targetY = triangle.y;
+		}
+		else
+		{
+			triangle.movingDown = true;
+		}
 	}
 
-	// 왼쪽 충돌
+	// 왼쪽 벽
 	else if (triangle.x - half <= -1.0f)
 	{
 		triangle.x = -1.0f + half;
 		triangle.dx = std::abs(triangle.dx);
-		triangle.y -= 0.10f;
-	}
 
-	// 아래까지 도착하면 위로 이동
-	if (triangle.y - half <= -1.0f)
-	{
-		triangle.y = 1.0f - half;
+		triangle.targetY = triangle.y - 0.30f;
+
+		if (triangle.targetY - half <= -1.0f)
+		{
+			triangle.y = 1.0f - half;
+			triangle.targetY = triangle.y;
+		}
+		else
+		{
+			triangle.movingDown = true;
+		}
 	}
 }
 
@@ -859,7 +1013,7 @@ void UpdateVerticalZigzag(Triangle& triangle)
 		triangle.size / 2.0f
 	};
 
-	triangle.x += triangle.dx * triangle.speed;
+	triangle.x += triangle.speed * 0.3f;
 	triangle.y += triangle.dy * triangle.speed * 3.0f;
 
 	// 위 충돌
@@ -888,12 +1042,47 @@ void UpdateVerticalZigzag(Triangle& triangle)
 // 4 : 원 스파이럴
 void UpdateSpiral(Triangle& triangle)
 {
-	float half{
-		triangle.size / 2.0f
+	float maxRadius{
+		0.5f
 	};
 
-	triangle.angle += triangle.speed * 15.0f;
-	triangle.radius += triangle.speed * 0.15f;
+	// 방향 전환 전 잠시 대기
+	if (triangle.waitCount > 0)
+	{
+		triangle.waitCount--;
+		return;
+	}
+
+	// 안쪽에서 바깥쪽으로
+	if (triangle.spiralOut)
+	{
+		triangle.angle += triangle.speed * 7.0f;
+		triangle.radius += triangle.speed * 0.10f;
+
+		// 바깥쪽 끝 도착
+		if (triangle.radius >= maxRadius)
+		{
+			triangle.radius = maxRadius;
+			triangle.spiralOut = false;
+			triangle.waitCount = 30;
+		}
+	}
+
+	// 바깥쪽에서 안쪽으로
+	else
+	{
+		triangle.angle -= triangle.speed * 7.0f;
+		triangle.radius -= triangle.speed * 0.10f;
+
+		// 중심 도착
+		if (triangle.radius <= 0.0f)
+		{
+			triangle.radius = 0.0f;
+			triangle.angle = 0.0f;
+			triangle.spiralOut = true;
+			triangle.waitCount = 30;
+		}
+	}
 
 	triangle.x =
 		triangle.centerX +
@@ -902,29 +1091,6 @@ void UpdateSpiral(Triangle& triangle)
 	triangle.y =
 		triangle.centerY +
 		triangle.radius * std::sin(triangle.angle);
-
-	// 가장자리에 닿으면 방향 변경
-	if (triangle.x + half >= 1.0f ||
-		triangle.x - half <= -1.0f ||
-		triangle.y + half >= 1.0f ||
-		triangle.y - half <= -1.0f)
-	{
-		// 현재 위치를 새로운 중심으로 사용
-		triangle.centerX = std::clamp(
-			triangle.x,
-			-0.8f,
-			0.8f
-		);
-
-		triangle.centerY = std::clamp(
-			triangle.y,
-			-0.8f,
-			0.8f
-		);
-
-		triangle.radius = 0.0f;
-		triangle.angle += PI;
-	}
 }
 
 // 이동 상태 초기화
@@ -950,11 +1116,16 @@ void ResetMovement()
 			triangles[i].dy = 0.5f;
 		}
 
+		triangles[i].movingDown = false;
+		triangles[i].targetY = triangles[i].y;
+
 		triangles[i].centerX = triangles[i].x;
 		triangles[i].centerY = triangles[i].y;
 
 		triangles[i].angle = 0.0f;
 		triangles[i].radius = 0.0f;
+		triangles[i].spiralOut = true;
+		triangles[i].waitCount = 0;
 	}
 }
 
